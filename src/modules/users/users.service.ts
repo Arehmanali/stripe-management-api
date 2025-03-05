@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { User } from './interfaces/user.interface';
 import { UserRepository } from './users.repository';
+import { randomUUID } from 'crypto';
 
 /**
  * Service for managing user-related operations.
@@ -20,7 +21,7 @@ export class UsersService {
   async createUser(email: string, password: string): Promise<User> {
     const hashedPassword = await bcrypt.hash(password, 10);
     const user: User = {
-      id: '',
+      id: randomUUID(),
       email,
       password: hashedPassword,
       role: 'user',

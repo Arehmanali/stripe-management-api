@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import * as bcrypt from 'bcrypt';
 import { toUserResponse } from './mapper/toUserResponse';
+import { hashUtil } from '@/utils/hash.util';
 
 @Injectable()
 export class AuthService {
@@ -28,7 +29,7 @@ export class AuthService {
     this.logger.debug(`Validating user: ${email}`);
     const user = await this.usersService.findByEmail(email);
 
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    if (!user || !(await hashUtil.compare(password, user.password))) {
       this.logger.warn(`Invalid credentials for user: ${email}`);
       return null;
     }

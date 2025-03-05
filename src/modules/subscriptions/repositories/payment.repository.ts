@@ -40,7 +40,7 @@ export class PaymentRepository {
 
   /**
    * Retrieves a payment by its ID.
-   * @param paymentId - The ID of the payment to retrieve.
+   * @param {string} paymentId - The ID of the payment to retrieve.
    * @returns The payment data or null if not found.
    */
   async getPaymentById(paymentId: string): Promise<Payment | null> {
@@ -60,8 +60,8 @@ export class PaymentRepository {
 
   /**
    * Updates a payment's status.
-   * @param paymentId - The ID of the payment to update.
-   * @param status - The new status of the payment.
+   * @param {string} paymentId - The ID of the payment to update.
+   * @param {string} status - The new status of the payment.
    */
   async updatePaymentStatus(paymentId: string, status: string): Promise<void> {
     try {

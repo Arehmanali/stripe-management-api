@@ -1,5 +1,6 @@
-import { PaymentRepository } from '../../src/modules/subscriptions/payment.repository';
 import { expect } from 'chai';
+import { PaymentRepository } from '@/modules/subscriptions/repositories/payment.repository';
+
 import sinon from 'sinon';
 import * as admin from 'firebase-admin';
 
@@ -27,9 +28,12 @@ describe('PaymentRepository', () => {
   describe('createPayment', () => {
     it('should create payment successfully', async () => {
       const paymentData = {
-        userId: 'user123',
-        amount: 9.99,
+        id: 'payment123',
+        userId: 'mock-test-user',
+        planId: 'mock-price-id',
         status: 'successful',
+        stripeSubscriptionId: 'mock-subscription-id',
+        createdAt: new Date(),
       };
 
       firestoreStub.add.resolves({ id: 'payment123' });
@@ -39,8 +43,12 @@ describe('PaymentRepository', () => {
 
     it('should handle errors when creating payment', async () => {
       const paymentData = {
-        userId: 'user123',
-        amount: 9.99,
+        id: 'payment123',
+        userId: 'mock-test-user',
+        planId: 'mock-price-id',
+        status: 'successful',
+        stripeSubscriptionId: 'mock-subscription-id',
+        createdAt: new Date(),
       };
 
       firestoreStub.add.rejects(new Error('Firestore error'));

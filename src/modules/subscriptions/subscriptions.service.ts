@@ -1,31 +1,33 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import * as admin from 'firebase-admin';
 import Stripe from 'stripe';
 import { PlansService } from '../plans/plans.service';
-import { Subscription } from '../../shared/interfaces/subscription.interface';
-import { Payment, PaymentRepository } from './payment.repository';
+
+import { Subscription } from '@/shared/interfaces/subscription.interface';
+import { Payment, PaymentRepository } from './repositories/payment.repository';
+import { SubscriptionRepository } from './repositories/subscriptions.respository';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
 
 @Injectable()
 export class SubscriptionsService {
-  private stripe: Stripe;
-  private db: FirebaseFirestore.Firestore;
   private readonly logger = new Logger(SubscriptionsService.name);
 
   constructor(
     private plansService: PlansService,
     private paymentRepository: PaymentRepository,
-  ) {
-    this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2025-01-27.acacia',
-    });
-    this.db = admin.firestore();
-  }
+    private subscriptionRepository: SubscriptionRepository,
+    private stripe: Stripe,
+  ) {}
 
+  /**
+   * Creates a checkout session for the user.
+   * @param {string} userId - The user ID.
+   * @param {string} planId - The plan ID.
+   * @returns {Promise<{ sessionId: string }>} The session ID for the checkout.
+   */
   async createCheckoutSession(userId: string, planId: string) {
-    const plan = this.plansService.getPlanById(planId);
+    const plan = await this.plansService.getPlanById(planId);
     if (!plan) {
       throw new NotFoundException('Plan not found');
     }
@@ -50,6 +52,12 @@ export class SubscriptionsService {
     return { sessionId: session.id };
   }
 
+  /**
+   * Handles Stripe webhook events.
+   * @param {string} signature - The Stripe webhook signature.
+   * @param {Buffer} payload - The raw event payload.
+   * @returns {Promise<{ received: boolean }>} Confirmation of received event.
+   */
   async handleWebhook(signature: string, payload: Buffer) {
     try {
       const event = this.stripe.webhooks.constructEvent(
@@ -61,7 +69,7 @@ export class SubscriptionsService {
       switch (event.type) {
         case 'checkout.session.completed': {
           const session = event.data.object;
-          await this.createSubscription(
+          await this.subscriptionRepository.createSubscription(
             session.client_reference_id,
             session.metadata.planId,
             session.subscription as string,
@@ -80,7 +88,7 @@ export class SubscriptionsService {
         }
         case 'customer.subscription.deleted': {
           const subscription = event.data.object;
-          await this.cancelSubscription(subscription.id);
+          await this.subscriptionRepository.cancelSubscription(subscription.id);
           break;
         }
       }
@@ -92,58 +100,29 @@ export class SubscriptionsService {
     }
   }
 
+  /**
+   * Gets the user's active subscription.
+   * @param {string} userId - The user ID.
+   * @returns {Promise<Subscription | null>} The user's active subscription or null.
+   */
   async getUserSubscription(userId: string): Promise<Subscription | null> {
-    const snapshot = await this.db
-      .collection('subscriptions')
-      .where('userId', '==', userId)
-      .where('status', '==', 'active')
-      .get();
-
-    if (snapshot.empty) {
-      return null;
-    }
-
-    const doc = snapshot.docs[0];
-    return { id: doc.id, ...doc.data() } as Subscription;
+    return await this.subscriptionRepository.getUserSubscription(userId);
   }
 
+  /**
+   * Gets all subscriptions.
+   * @returns {Promise<Subscription[]>} List of all subscriptions.
+   */
   async getAllSubscriptions(): Promise<Subscription[]> {
-    const snapshot = await this.db.collection('subscriptions').get();
-    return snapshot.docs.map(
-      (doc) =>
-        ({
-          id: doc.id,
-          ...doc.data(),
-        }) as Subscription,
-    );
+    return await this.subscriptionRepository.getAllSubscriptions();
   }
 
-  private async createSubscription(
-    userId: string,
-    planId: string,
-    stripeSubscriptionId: string,
-  ): Promise<void> {
-    await this.db.collection('subscriptions').add({
-      userId,
-      planId,
-      stripeSubscriptionId,
-      status: 'active',
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-  }
-
+  /**
+   * Cancels a subscription using the Stripe subscription ID.
+   * @param {string} stripeSubscriptionId - The Stripe subscription ID.
+   * @returns {Promise<void>}
+   */
   async cancelSubscription(stripeSubscriptionId: string): Promise<void> {
-    const snapshot = await this.db
-      .collection('subscriptions')
-      .where('stripeSubscriptionId', '==', stripeSubscriptionId)
-      .get();
-
-    if (!snapshot.empty) {
-      const doc = snapshot.docs[0];
-      await doc.ref.update({
-        status: 'cancelled',
-        cancelledAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-    }
+    await this.subscriptionRepository.cancelSubscription(stripeSubscriptionId);
   }
 }

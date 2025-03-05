@@ -1,7 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SubscriptionsService } from '../../src/modules/subscriptions/subscriptions.service';
 import { PlansService } from '../../src/modules/plans/plans.service';
-import { PaymentRepository } from '../../src/modules/subscriptions/payment.repository';
+import { PaymentRepository } from '../../src/modules/subscriptions/repositories/payment.repository';
+import { SubscriptionRepository } from '@/modules/subscriptions/repositories/subscriptions.respository';
 import { expect } from 'chai';
 import sinon from 'sinon';
 import Stripe from 'stripe';
@@ -10,6 +11,7 @@ describe('SubscriptionsService', () => {
   let service: SubscriptionsService;
   let plansService: PlansService;
   let paymentRepository: PaymentRepository;
+  let subscriptionRepository: SubscriptionRepository;
   let stripeStub: sinon.SinonStubbedInstance<Stripe>;
 
   beforeEach(async () => {
@@ -43,12 +45,28 @@ describe('SubscriptionsService', () => {
             updatePaymentStatus: sinon.stub(),
           },
         },
+        {
+          provide: SubscriptionRepository,
+          useValue: {
+            createPayment: sinon.stub(),
+            updatePaymentStatus: sinon.stub(),
+          },
+        },
+        {
+          provide: Stripe,
+          useValue: {
+            sessions: sinon.stub(),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<SubscriptionsService>(SubscriptionsService);
     plansService = module.get<PlansService>(PlansService);
     paymentRepository = module.get<PaymentRepository>(PaymentRepository);
+    subscriptionRepository = module.get<SubscriptionRepository>(
+      SubscriptionRepository,
+    );
   });
 
   afterEach(() => {

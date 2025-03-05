@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ConflictException } from '@nestjs/common';
 import * as admin from 'firebase-admin';
 import { User } from './interfaces/user.interface';
 
@@ -15,10 +15,18 @@ export class UserRepository {
 
   /**
    * Creates a new user in Firestore.
+   * Checks if the user already exists by email. If so, throws a conflict error.
    * @param {User} user - The user object to be created.
    * @returns {Promise<User>} The created user with its ID.
    */
   async createUser(user: User): Promise<User> {
+    // Check if the user already exists
+    const existingUser = await this.findByEmail(user.email);
+    if (existingUser) {
+      throw new ConflictException('User already exists with this email');
+    }
+
+    // If the user doesn't exist, create a new user
     const docRef = await this.db.collection('users').add(user);
     return { ...user, id: docRef.id };
   }

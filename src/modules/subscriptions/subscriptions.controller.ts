@@ -26,6 +26,7 @@ import { Public } from '../../shared/decorators/public.decorator';
 import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
 import { Request } from 'express';
 import { Subscription } from '../../shared/interfaces/subscription.interface';
+import { JWT_AUTH } from '@/shared/strategies/jwt.strategy';
 
 /**
  * Controller responsible for handling subscription-related operations.
@@ -33,7 +34,7 @@ import { Subscription } from '../../shared/interfaces/subscription.interface';
 @ApiTags('subscriptions')
 @Controller('subscriptions')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@ApiBearerAuth('JWT-auth')
+@ApiBearerAuth(JWT_AUTH)
 export class SubscriptionsController {
   private readonly logger = new Logger(SubscriptionsController.name);
 
