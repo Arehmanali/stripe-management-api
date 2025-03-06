@@ -1,12 +1,12 @@
 import { Test } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { UnauthorizedException } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
 import * as sinon from 'sinon';
 import { expect } from 'chai';
 import { AuthService } from '@/modules/auth/auth.service';
 import { UsersService } from '@/modules/users/users.service';
-import { hashUtil } from '@/utils/hash.util';
+import { bcryptUtil } from '@/utils/bcrypt.util';
+import { UserRole } from '@/modules/auth/dto/auth.dto';
 
 describe('AuthService', () => {
   let authService: AuthService;
@@ -51,12 +51,12 @@ describe('AuthService', () => {
       id: '123',
       email: 'test@example.com',
       password: 'hashedPassword',
-      role: 'user',
+      role: UserRole.USER,
       createdAt: now,
     };
 
     usersService.findByEmail.resolves(user);
-    sinon.stub(hashUtil, 'compare').resolves(true);
+    sinon.stub(bcryptUtil, 'compare').resolves(true);
 
     const result = await authService.validateUser(
       'test@example.com',
@@ -66,7 +66,7 @@ describe('AuthService', () => {
     expect(result).to.deep.equal({
       id: '123',
       email: 'test@example.com',
-      role: 'user',
+      role: UserRole.USER,
       createdAt: now,
     });
     expect(usersService.findByEmail.calledOnceWith('test@example.com')).to.be
@@ -90,12 +90,12 @@ describe('AuthService', () => {
       id: '123',
       email: 'test@example.com',
       password: 'hashedPassword',
-      role: 'user',
+      role: UserRole.USER,
       createdAt: now,
     };
 
     usersService.findByEmail.resolves(user);
-    sinon.stub(hashUtil, 'compare').resolves(false);
+    sinon.stub(bcryptUtil, 'compare').resolves(false);
 
     const result = await authService.validateUser(
       'test@example.com',
@@ -113,7 +113,7 @@ describe('AuthService', () => {
       expect.fail('Expected UnauthorizedException');
     } catch (error) {
       expect(error).to.be.instanceOf(UnauthorizedException);
-      expect(error.message).to.equal('Invalid credentials');
+      expect(error.message).to.equal('Invalid credentials or user not found');
     }
   });
 
@@ -122,12 +122,12 @@ describe('AuthService', () => {
       id: '123',
       email: 'test@example.com',
       password: 'hashedPassword',
-      role: 'user',
+      role: UserRole.USER,
       createdAt: new Date(),
     };
 
     usersService.findByEmail.resolves(user);
-    sinon.stub(hashUtil, 'compare').resolves(true);
+    sinon.stub(bcryptUtil, 'compare').resolves(true);
     jwtService.sign.returns('mocked-jwt-token');
 
     const result = await authService.login('test@example.com', 'password');

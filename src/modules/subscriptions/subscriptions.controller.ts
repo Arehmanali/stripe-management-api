@@ -6,8 +6,8 @@ import {
   Headers,
   Req,
   UseGuards,
-  Logger,
   Param,
+  RawBodyRequest,
 } from '@nestjs/common';
 import { SubscriptionsService } from './subscriptions.service';
 import { JwtAuthGuard } from '../../shared/guards/jwt-auth.guard';
@@ -23,10 +23,11 @@ import {
 import { RolesGuard } from '../../shared/guards/roles.guard';
 import { Roles } from '../../shared/decorators/roles.decorator';
 import { Public } from '../../shared/decorators/public.decorator';
-import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
+import { CreateCheckoutSessionDTO } from './dto/create-checkout-session.dto';
 import { Request } from 'express';
 import { Subscription } from '../../shared/interfaces/subscription.interface';
 import { JWT_AUTH } from '@/shared/strategies/jwt.strategy';
+import { createLogger } from '@/shared/logger/logger';
 
 /**
  * Controller responsible for handling subscription-related operations.
@@ -36,7 +37,7 @@ import { JWT_AUTH } from '@/shared/strategies/jwt.strategy';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth(JWT_AUTH)
 export class SubscriptionsController {
-  private readonly logger = new Logger(SubscriptionsController.name);
+  private readonly logger = createLogger(SubscriptionsController.name);
 
   constructor(private readonly subscriptionsService: SubscriptionsService) {}
 
@@ -44,19 +45,19 @@ export class SubscriptionsController {
    * Creates a checkout session for subscribing to a plan.
    *
    * @param {Request & { user: { id: string } }} req - The request object containing user information.
-   * @param {CreateCheckoutSessionDto} body - DTO containing the plan ID for checkout.
+   * @param {CreateCheckoutSessionDTO} body - DTO containing the plan ID for checkout.
    * @returns {Promise<any>} - Returns the checkout session details.
    */
   @Post('checkout')
   @ApiOperation({ summary: 'Create a checkout session for subscription' })
-  @ApiBody({ type: CreateCheckoutSessionDto })
+  @ApiBody({ type: CreateCheckoutSessionDTO })
   @ApiResponse({
     status: 201,
     description: 'Checkout session created successfully',
   })
   async createCheckoutSession(
     @Req() req: Request & { user: { id: string } },
-    @Body() body: CreateCheckoutSessionDto,
+    @Body() body: CreateCheckoutSessionDTO,
   ) {
     this.logger.log(
       `Creating checkout session for user: ${req.user.id} with plan: ${body.planId}`,
@@ -124,9 +125,14 @@ export class SubscriptionsController {
   })
   async handleWebhook(
     @Headers('stripe-signature') signature: string,
-    @Body() rawBody: Buffer,
+    @Req() req: RawBodyRequest<Request>,
   ) {
     this.logger.log('Handling Stripe webhook event');
+    const rawBody = req.rawBody;
+    if (!rawBody) {
+      this.logger.error('Raw body is missing in the request');
+      throw new Error('Raw body is required for webhook verification');
+    }
     return this.subscriptionsService.handleWebhook(signature, rawBody);
   }
 

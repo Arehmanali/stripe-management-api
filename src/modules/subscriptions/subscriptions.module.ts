@@ -5,9 +5,10 @@ import { PlansModule } from '../plans/plans.module';
 import { PaymentRepository } from './repositories/payment.repository';
 import { StripeProvider } from '@/shared/providers/stripe.provider';
 import { SubscriptionRepository } from './repositories/subscriptions.respository';
+import { FirebaseModule } from '@/shared/providers/firebase.provider';
 
 @Module({
-  imports: [PlansModule],
+  imports: [PlansModule, FirebaseModule],
   controllers: [SubscriptionsController],
   providers: [
     SubscriptionsService,

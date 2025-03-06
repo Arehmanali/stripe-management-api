@@ -9,21 +9,9 @@ import {
   ApiBody,
   ApiBadRequestResponse,
   ApiUnauthorizedResponse,
-  ApiProperty,
 } from '@nestjs/swagger';
 
-import { IsNotEmpty, IsString } from 'class-validator';
 import { Public } from '@/shared/decorators/public.decorator';
-
-/**
- * Data Transfer Object for creating a checkout session.
- */
-export class CreateCheckoutSessionDto {
-  @ApiProperty()
-  @IsString()
-  @IsNotEmpty()
-  planId: string;
-}
 
 @ApiTags('auth')
 @Controller('auth')

@@ -18,7 +18,7 @@ describe('SubscriptionsService', () => {
     stripeStub = {
       checkout: {
         sessions: {
-          create: sinon.stub(),
+          create: sinon.stub().resolves({ id: 'sess_123' }),
         },
       },
       webhooks: {
@@ -54,9 +54,7 @@ describe('SubscriptionsService', () => {
         },
         {
           provide: Stripe,
-          useValue: {
-            sessions: sinon.stub(),
-          },
+          useValue: stripeStub,
         },
       ],
     }).compile();
@@ -84,23 +82,19 @@ describe('SubscriptionsService', () => {
         stripePriceId: 'price_basic',
         features: ['Feature 1'],
       };
-      const sessionId = 'sess_123';
 
-      (plansService.getPlanById as sinon.SinonStub).returns(plan);
-      (stripeStub.checkout.sessions.create as sinon.SinonStub).resolves({
-        id: sessionId,
-      });
+      (plansService.getPlanById as sinon.SinonStub).resolves(plan);
 
       const result = await service.createCheckoutSession(userId, planId);
 
-      expect(result).to.deep.equal({ sessionId });
+      expect(result).to.deep.equal({ sessionId: 'sess_123' });
     });
 
     it('should throw NotFoundException for invalid plan', async () => {
       const userId = 'user123';
       const planId = 'invalid';
 
-      (plansService.getPlanById as sinon.SinonStub).returns(undefined);
+      (plansService.getPlanById as sinon.SinonStub).resolves(undefined);
 
       try {
         await service.createCheckoutSession(userId, planId);

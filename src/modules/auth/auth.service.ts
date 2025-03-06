@@ -1,13 +1,13 @@
-import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
-import * as bcrypt from 'bcrypt';
 import { toUserResponse } from './mapper/toUserResponse';
-import { hashUtil } from '@/utils/hash.util';
+import { bcryptUtil } from '@/utils/bcrypt.util';
+import { createLogger } from '@/shared/logger/logger';
 
 @Injectable()
 export class AuthService {
-  private readonly logger = new Logger(AuthService.name);
+  private readonly logger = createLogger(AuthService.name);
 
   /**
    * Creates an instance of AuthService.
@@ -28,8 +28,12 @@ export class AuthService {
   async validateUser(email: string, password: string) {
     this.logger.debug(`Validating user: ${email}`);
     const user = await this.usersService.findByEmail(email);
+    if (!user) {
+      this.logger.warn(`User not found with email: ${email}`);
+      return null;
+    }
 
-    if (!user || !(await hashUtil.compare(password, user.password))) {
+    if (!(await bcryptUtil.compare(password, user.password))) {
       this.logger.warn(`Invalid credentials for user: ${email}`);
       return null;
     }
@@ -40,6 +44,7 @@ export class AuthService {
 
   /**
    * Authenticates a user and generates a JWT token.
+   *
    * @param {string} email - The user's email.
    * @param {string} password - The user's password.
    * @returns {Promise<{ access_token: string }>} - Returns an access token if authentication is successful.
@@ -51,7 +56,7 @@ export class AuthService {
 
     if (!user) {
       this.logger.error(`Login failed for user: ${email}`);
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Invalid credentials or user not found');
     }
 
     const access_token = this.jwtService.sign({

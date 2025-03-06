@@ -4,6 +4,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import { JWT_AUTH } from './shared/strategies/jwt.strategy';
 import * as dotenv from 'dotenv';
+import { json, Request, Response, NextFunction } from 'express';
 import 'reflect-metadata';
 
 dotenv.config();
@@ -13,9 +14,18 @@ async function bootstrap() {
 
   // Enable CORS
   app.enableCors();
-
-  // Validation pipe
   app.useGlobalPipes(new ValidationPipe());
+  app.use(
+    '/subscriptions/webhook',
+    json({
+      verify: (req: Request, res, buf) => {
+        if (req.originalUrl === '/subscriptions/webhook') {
+          (req as any).rawBody = buf.toString();
+        }
+      },
+    }),
+  );
+  app.use(json());
 
   // Swagger configuration
   const config = new DocumentBuilder()

@@ -40,22 +40,22 @@ export const SUBSCRIPTION_PLANS: Plan[] = [
   {
     id: 'basic',
     name: 'Basic Plan',
-    price: 9.99,
-    stripePriceId: 'price_basic',
+    price: 100,
+    stripePriceId: 'price_1Qzl0MQS67ywEgPXyvadnLlM',
     features: ['Feature 1', 'Feature 2'],
   },
   {
     id: 'standard',
     name: 'Standard Plan',
-    price: 19.99,
-    stripePriceId: 'price_standard',
+    price: 200,
+    stripePriceId: 'price_1Qzl0dQS67ywEgPXWtnB144D',
     features: ['Feature 1', 'Feature 2', 'Feature 3'],
   },
   {
     id: 'premium',
     name: 'Premium Plan',
-    price: 29.99,
-    stripePriceId: 'price_premium',
+    price: 300,
+    stripePriceId: 'price_1Qzl14QS67ywEgPXO1pICTcx',
     features: ['Feature 1', 'Feature 2', 'Feature 3', 'Feature 4'],
   },
 ];

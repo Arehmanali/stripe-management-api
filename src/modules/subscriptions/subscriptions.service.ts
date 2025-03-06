@@ -1,17 +1,19 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import Stripe from 'stripe';
 import { PlansService } from '../plans/plans.service';
 
 import { Subscription } from '@/shared/interfaces/subscription.interface';
 import { Payment, PaymentRepository } from './repositories/payment.repository';
 import { SubscriptionRepository } from './repositories/subscriptions.respository';
+import { createLogger } from '@/shared/logger/logger';
 import * as dotenv from 'dotenv';
+import { StripeWebhookEvents } from './dto/create-checkout-session.dto';
 
 dotenv.config();
 
 @Injectable()
 export class SubscriptionsService {
-  private readonly logger = new Logger(SubscriptionsService.name);
+  private readonly logger = createLogger(SubscriptionsService.name);
 
   constructor(
     private plansService: PlansService,
@@ -46,6 +48,7 @@ export class SubscriptionsService {
       client_reference_id: userId,
       metadata: {
         planId,
+        userId,
       },
     });
 
@@ -67,7 +70,7 @@ export class SubscriptionsService {
       );
 
       switch (event.type) {
-        case 'checkout.session.completed': {
+        case StripeWebhookEvents.CheckoutSessionCompleted: {
           const session = event.data.object;
           await this.subscriptionRepository.createSubscription(
             session.client_reference_id,
@@ -81,12 +84,11 @@ export class SubscriptionsService {
             planId: session.metadata.planId,
             status: 'successful',
             stripeSubscriptionId: session.subscription as string,
-            createdAt: new Date(),
           } as Payment);
 
           break;
         }
-        case 'customer.subscription.deleted': {
+        case StripeWebhookEvents.CustomerSubscriptionDeleted: {
           const subscription = event.data.object;
           await this.subscriptionRepository.cancelSubscription(subscription.id);
           break;

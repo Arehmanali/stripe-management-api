@@ -43,6 +43,8 @@ Create a `.env` file in the root directory with the following variables:
 PORT=3000
 NODE_ENV=development
 
+FRONTEND_URL=localhost
+
 # JWT
 JWT_SECRET=your_jwt_secret_key
 JWT_EXPIRATION=24h
