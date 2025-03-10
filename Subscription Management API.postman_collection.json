@@ -1,0 +1,298 @@
+{
+	"info": {
+		"_postman_id": "7773c88f-6049-4462-ab76-a5fbc67c19e5",
+		"name": "Subscription Management API",
+		"description": "API collection for subscription management service",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "31918401",
+		"_collection_link": "https://upcover.postman.co/workspace/Team-Workspace~fdd1ae83-3f2f-477f-8281-68edf501abaf/collection/31918401-7773c88f-6049-4462-ab76-a5fbc67c19e5?action=share&source=collection_link&creator=31918401"
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Sign Up",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/signup",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"signup"
+							]
+						},
+						"description": "Register a new user"
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.collectionVariables.set(\"auth_token\", jsonData.access_token);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						},
+						"description": "Login user and get JWT token"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Plans",
+			"item": [
+				{
+					"name": "Get All Plans",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/plans",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"plans"
+							]
+						},
+						"description": "Get all available subscription plans"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Subscriptions",
+			"item": [
+				{
+					"name": "Create Checkout Session",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"planId\": \"premium\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/subscriptions/checkout",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"subscriptions",
+								"checkout"
+							]
+						},
+						"description": "Create a Stripe checkout session for subscription"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Subscription",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/subscriptions/user",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"subscriptions",
+								"user"
+							]
+						},
+						"description": "Get current user's subscription"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Subscriptions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/subscriptions/all",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"subscriptions",
+								"all"
+							]
+						},
+						"description": "Get all subscriptions (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Subscription",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/subscriptions/cancel/:subscriptionId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"subscriptions",
+								"cancel",
+								":subscriptionId"
+							],
+							"variable": [
+								{
+									"key": "subscriptionId",
+									"value": "sub_123",
+									"description": "Stripe subscription ID"
+								}
+							]
+						},
+						"description": "Cancel an active subscription"
+					},
+					"response": []
+				},
+				{
+					"name": "Stripe Webhook",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Stripe-Signature",
+								"value": "{{stripe_signature}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{base_url}}/subscriptions/webhook",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"subscriptions",
+								"webhook"
+							]
+						},
+						"description": "Handle Stripe webhook events"
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "admin_auth_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "auth_token",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

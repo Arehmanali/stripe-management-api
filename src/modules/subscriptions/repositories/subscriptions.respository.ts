@@ -39,7 +39,6 @@ export class SubscriptionRepository {
    * @returns {Promise<Subscription | null>} The active subscription or null.
    */
   async getUserSubscription(userId: string): Promise<Subscription | null> {
-    console.log('user', userId);
     const snapshot = await this.db
       .collection(SUBSCRIPTION_COLLECTION_NAME)
       .where('userId', '==', userId)
@@ -74,20 +73,30 @@ export class SubscriptionRepository {
   /**
    * Cancels a subscription by its Stripe subscription ID.
    * @param {string} stripeSubscriptionId - The Stripe subscription ID.
-   * @returns {Promise<void>}
+   * @returns {Promise<Subscription>}
    */
-  async cancelSubscription(stripeSubscriptionId: string): Promise<void> {
+  async cancelSubscription(
+    stripeSubscriptionId: string,
+  ): Promise<Subscription> {
     const snapshot = await this.db
       .collection(SUBSCRIPTION_COLLECTION_NAME)
       .where('stripeSubscriptionId', '==', stripeSubscriptionId)
+      .where('status', '==', SubscriptionStatus.Active)
       .get();
 
-    if (!snapshot.empty) {
-      const doc = snapshot.docs[0];
-      await doc.ref.update({
-        status: SubscriptionStatus.Cancelled,
-        cancelledAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
+    if (snapshot.empty) {
+      return null;
     }
+
+    const doc = snapshot.docs[0];
+
+    // Update subscription status to 'Cancelled'
+    await doc.ref.update({
+      status: SubscriptionStatus.Cancelled,
+      cancelledAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    const updatedDoc = await doc.ref.get();
+    return { id: updatedDoc.id, ...updatedDoc.data() } as Subscription;
   }
 }

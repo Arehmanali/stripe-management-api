@@ -108,7 +108,15 @@ export class SubscriptionsService {
    * @returns {Promise<Subscription | null>} The user's active subscription or null.
    */
   async getUserSubscription(userId: string): Promise<Subscription | null> {
-    return await this.subscriptionRepository.getUserSubscription(userId);
+    this.logger.debug(`Getting active subscription for user ${userId}`);
+    const subscription =
+      await this.subscriptionRepository.getUserSubscription(userId);
+    if (!subscription) {
+      const message = `No active subscription found for user ${userId}`;
+      this.logger.error(message);
+      throw new NotFoundException(message);
+    }
+    return subscription;
   }
 
   /**
@@ -116,7 +124,15 @@ export class SubscriptionsService {
    * @returns {Promise<Subscription[]>} List of all subscriptions.
    */
   async getAllSubscriptions(): Promise<Subscription[]> {
-    return await this.subscriptionRepository.getAllSubscriptions();
+    this.logger.debug('Getting all the subscriptions');
+    const subscriptions =
+      await this.subscriptionRepository.getAllSubscriptions();
+    if (subscriptions.length === 0) {
+      const message = 'No subscriptions found';
+      this.logger.error(message);
+      throw new NotFoundException(message);
+    }
+    return subscriptions;
   }
 
   /**
@@ -124,7 +140,20 @@ export class SubscriptionsService {
    * @param {string} stripeSubscriptionId - The Stripe subscription ID.
    * @returns {Promise<void>}
    */
-  async cancelSubscription(stripeSubscriptionId: string): Promise<void> {
-    await this.subscriptionRepository.cancelSubscription(stripeSubscriptionId);
+  async cancelSubscription(
+    stripeSubscriptionId: string,
+  ): Promise<Subscription> {
+    this.logger.debug(`Cancelling the subscription ${stripeSubscriptionId}`);
+    const cancelledSubscription =
+      await this.subscriptionRepository.cancelSubscription(
+        stripeSubscriptionId,
+      );
+    if (!cancelledSubscription) {
+      const message = `No active subscription ${stripeSubscriptionId} found to cancel`;
+      this.logger.error(message);
+      throw new NotFoundException(message);
+    }
+
+    return cancelledSubscription;
   }
 }
