@@ -1,13 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
 import { User } from './interfaces/user.interface';
-import { UserRepository } from './users.repository';
+import { UserRepository } from './repositories/users.repository';
+import { randomUUID } from 'crypto';
+import { bcryptUtil } from '@/utils/bcrypt.util';
+import { createLogger } from '@/shared/logger/logger';
+import { UserRole } from '../auth/dto/auth.dto';
 
 /**
  * Service for managing user-related operations.
  */
 @Injectable()
 export class UsersService {
+  private readonly logger = createLogger(UsersService.name);
+
   constructor(private userRepository: UserRepository) {}
 
   /**
@@ -18,16 +23,27 @@ export class UsersService {
    * @returns {Promise<User>} - The created user object.
    */
   async createUser(email: string, password: string): Promise<User> {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user: User = {
-      id: '',
-      email,
-      password: hashedPassword,
-      role: 'user',
-      createdAt: new Date(),
-    };
+    this.logger.log(`Creating user with email: ${email}`);
+    try {
+      const hashedPassword = await bcryptUtil.hash(password, 10);
+      const user: User = {
+        id: randomUUID(),
+        email,
+        password: hashedPassword,
+        role: UserRole.USER,
+      };
 
-    return this.userRepository.createUser(user);
+      const createdUser = await this.userRepository.createUser(user);
+      this.logger.log(`User created successfully: ${createdUser.id}`);
+      return createdUser;
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        this.logger.error(`Error creating user: ${error.message}`, error.stack);
+      } else {
+        this.logger.error('Unknown error occurred while creating user');
+      }
+      throw error;
+    }
   }
 
   /**
@@ -37,6 +53,22 @@ export class UsersService {
    * @returns {Promise<User | null>} - The user object if found, otherwise null.
    */
   async findByEmail(email: string): Promise<User | null> {
-    return this.userRepository.findByEmail(email);
+    this.logger.log(`Finding user by email: ${email}`);
+
+    try {
+      const user = await this.userRepository.findByEmail(email);
+      if (!user) {
+        this.logger.warn(`User not found with email: ${email}`);
+      } else {
+        this.logger.log(`User found: ${user.id}`);
+      }
+      return user;
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        this.logger.error(`Error finding user: ${error.message}`, error.stack);
+      }
+      this.logger.error('Unknown error while finding the user');
+      throw error;
+    }
   }
 }

@@ -1,7 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEmail, IsString, MinLength } from 'class-validator';
 
-export class AuthCredentialsDto {
+export enum UserRole {
+  USER = 'user',
+  ADMIN = 'admin',
+}
+export class AuthCredentialsDTO {
   @ApiProperty({
     example: 'user@example.com',
     description: 'The email address of the user',
@@ -19,7 +23,7 @@ export class AuthCredentialsDto {
   password: string;
 }
 
-export class LoginResponseDto {
+export class LoginResponseDTO {
   @ApiProperty({
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
     description: 'JWT access token',

@@ -1,19 +1,20 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { AuthService } from '../../src/modules/auth/auth.service';
-import { UsersService } from '../../src/modules/users/users.service';
+import { Test } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
+import { UnauthorizedException } from '@nestjs/common';
+import * as sinon from 'sinon';
 import { expect } from 'chai';
-import sinon from 'sinon';
-import * as bcrypt from 'bcrypt';
-import { Logger, UnauthorizedException } from '@nestjs/common';
-import { User } from '@/modules/users/interfaces/user.interface';
+import { AuthService } from '@/modules/auth/auth.service';
+import { UsersService } from '@/modules/users/users.service';
+import { bcryptUtil } from '@/utils/bcrypt.util';
+import { UserRole } from '@/modules/auth/dto/auth.dto';
 
 describe('AuthService', () => {
-  let service: AuthService;
-  let usersService: UsersService;
+  let authService: AuthService;
+  let usersService: sinon.SinonStubbedInstance<UsersService>;
+  let jwtService: sinon.SinonStubbedInstance<JwtService>;
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    const moduleRef = await Test.createTestingModule({
       providers: [
         AuthService,
         {
@@ -25,117 +26,113 @@ describe('AuthService', () => {
         {
           provide: JwtService,
           useValue: {
-            sign: sinon.stub().returns('test.jwt.token'),
-          },
-        },
-        {
-          provide: Logger,
-          useValue: {
-            debug: sinon.stub(),
-            warn: sinon.stub(),
-            error: sinon.stub(),
-            log: sinon.stub(),
+            sign: sinon.stub(),
           },
         },
       ],
     }).compile();
 
-    service = module.get<AuthService>(AuthService);
-    usersService = module.get<UsersService>(UsersService);
+    authService = moduleRef.get<AuthService>(AuthService);
+    usersService = moduleRef.get(
+      UsersService,
+    ) as sinon.SinonStubbedInstance<UsersService>;
+    jwtService = moduleRef.get(
+      JwtService,
+    ) as sinon.SinonStubbedInstance<JwtService>;
   });
 
   afterEach(() => {
     sinon.restore();
   });
 
-  describe('validateUser', () => {
-    it('should validate user with correct credentials', async () => {
-      const email = 'test@example.com';
-      const password = 'password123';
-      const hashedPassword = 'hashedPassword123';
-      const user = {
-        id: '123',
-        email,
-        password: hashedPassword,
-        role: 'user',
-        createdAt: new Date(),
-      };
+  it('should validate user with correct credentials', async () => {
+    const now = new Date();
+    const user = {
+      id: '123',
+      email: 'test@example.com',
+      password: 'hashedPassword',
+      role: UserRole.USER,
+      createdAt: now,
+    };
 
-      (usersService.findByEmail as sinon.SinonStub).resolves(user);
-      sinon.stub(bcrypt, 'compare').resolves(true);
+    usersService.findByEmail.resolves(user);
+    sinon.stub(bcryptUtil, 'compare').resolves(true);
 
-      const result = await service.validateUser(email, password);
+    const result = await authService.validateUser(
+      'test@example.com',
+      'password',
+    );
 
-      expect(result).to.deep.equal({
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        createdAt: user.createdAt,
-      });
+    expect(result).to.deep.equal({
+      id: '123',
+      email: 'test@example.com',
+      role: UserRole.USER,
+      createdAt: now,
     });
-
-    it('should return null for invalid credentials', async () => {
-      const email = 'test@example.com';
-      const password = 'wrongpassword';
-      const user = {
-        id: '123',
-        email,
-        password: 'hashedPassword123',
-        role: 'user',
-        createdAt: new Date(),
-      };
-
-      (usersService.findByEmail as sinon.SinonStub).resolves(user);
-      sinon.stub(bcrypt, 'compare').resolves(false);
-
-      const result = await service.validateUser(email, password);
-
-      expect(result).to.be(null);
-    });
-
-    it('should return null when user not found', async () => {
-      const email = 'nonexistent@example.com';
-      const password = 'password123';
-
-      (usersService.findByEmail as sinon.SinonStub).resolves(null);
-
-      const result = await service.validateUser(email, password);
-
-      expect(result).to.be(null);
-    });
+    expect(usersService.findByEmail.calledOnceWith('test@example.com')).to.be
+      .true;
   });
 
-  describe('login', () => {
-    it('should generate JWT token for valid credentials', async () => {
-      const email = 'test@example.com';
-      const password = 'password123';
-      const user = {
-        id: '123',
-        email,
-        role: 'user',
-        createdAt: new Date(),
-      };
+  it('should return null if user is not found', async () => {
+    usersService.findByEmail.resolves(null);
 
-      sinon.stub(service, 'validateUser').resolves(user as User);
+    const result = await authService.validateUser(
+      'notfound@example.com',
+      'password',
+    );
 
-      const result = await service.login(email, password);
+    expect(result).to.be.null;
+  });
 
-      expect(result).to.have.property('access_token');
-      expect(result.access_token).to.equal('test.jwt.token');
-    });
+  it('should return null if password does not match', async () => {
+    const now = new Date();
+    const user = {
+      id: '123',
+      email: 'test@example.com',
+      password: 'hashedPassword',
+      role: UserRole.USER,
+      createdAt: now,
+    };
 
-    it('should throw UnauthorizedException for invalid credentials', async () => {
-      const email = 'test@example.com';
-      const password = 'wrongpassword';
+    usersService.findByEmail.resolves(user);
+    sinon.stub(bcryptUtil, 'compare').resolves(false);
 
-      sinon.stub(service, 'validateUser').resolves(null);
+    const result = await authService.validateUser(
+      'test@example.com',
+      'wrongpassword',
+    );
 
-      try {
-        await service.login(email, password);
-        expect.fail('Should have thrown an error');
-      } catch (error) {
-        expect(error).to.be.instanceOf(UnauthorizedException);
-      }
-    });
+    expect(result).to.be.null;
+  });
+
+  it('should throw UnauthorizedException if login fails', async () => {
+    usersService.findByEmail.resolves(null);
+
+    try {
+      await authService.login('invalid@example.com', 'wrongpassword');
+      expect.fail('Expected UnauthorizedException');
+    } catch (error) {
+      expect(error).to.be.instanceOf(UnauthorizedException);
+      expect(error.message).to.equal('Invalid credentials or user not found');
+    }
+  });
+
+  it('should return access token if login is successful', async () => {
+    const user = {
+      id: '123',
+      email: 'test@example.com',
+      password: 'hashedPassword',
+      role: UserRole.USER,
+      createdAt: new Date(),
+    };
+
+    usersService.findByEmail.resolves(user);
+    sinon.stub(bcryptUtil, 'compare').resolves(true);
+    jwtService.sign.returns('mocked-jwt-token');
+
+    const result = await authService.login('test@example.com', 'password');
+
+    expect(result).to.deep.equal({ access_token: 'mocked-jwt-token' });
+    expect(jwtService.sign.calledOnce).to.be.true;
   });
 });

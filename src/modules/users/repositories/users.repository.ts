@@ -1,26 +1,37 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ConflictException } from '@nestjs/common';
+import { User } from '../interfaces/user.interface';
+import { Firestore } from 'firebase-admin/firestore';
 import * as admin from 'firebase-admin';
-import { User } from './interfaces/user.interface';
+
+const USER_COLLECTION_NAME = 'users';
 
 /**
  * Repository for managing users in Firestore.
  */
 @Injectable()
 export class UserRepository {
-  private db: FirebaseFirestore.Firestore;
-
-  constructor() {
-    this.db = admin.firestore();
-  }
+  constructor(private readonly db: Firestore) {}
 
   /**
    * Creates a new user in Firestore.
+   * Checks if the user already exists by email. If so, throws a conflict error.
    * @param {User} user - The user object to be created.
    * @returns {Promise<User>} The created user with its ID.
    */
   async createUser(user: User): Promise<User> {
-    const docRef = await this.db.collection('users').add(user);
-    return { ...user, id: docRef.id };
+    const existingUser = await this.findByEmail(user.email);
+    if (existingUser) {
+      throw new ConflictException('User already exists with this email');
+    }
+
+    await this.db
+      .collection(USER_COLLECTION_NAME)
+      .doc(user.id)
+      .set({
+        ...user,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    return user;
   }
 
   /**
@@ -30,7 +41,7 @@ export class UserRepository {
    */
   async findByEmail(email: string): Promise<User | null> {
     const snapshot = await this.db
-      .collection('users')
+      .collection(USER_COLLECTION_NAME)
       .where('email', '==', email)
       .get();
 

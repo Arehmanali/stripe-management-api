@@ -1,9 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from '../../src/modules/users/users.service';
-import { UserRepository } from '../../src/modules/users/users.repository';
+import { UserRepository } from '../../src/modules/users/repositories/users.repository';
 import { expect } from 'chai';
 import sinon from 'sinon';
-import * as bcrypt from 'bcrypt';
+import { bcryptUtil } from '@/utils/bcrypt.util';
+import { UserRole } from '@/modules/auth/dto/auth.dto';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -42,11 +43,11 @@ describe('UsersService', () => {
         id: '123',
         email,
         password: hashedPassword,
-        role: 'user',
+        role: UserRole.USER,
         createdAt: new Date(),
       };
+      sinon.stub(bcryptUtil, 'hash').resolves(hashedPassword);
 
-      sinon.stub(bcrypt, 'hash').resolves(hashedPassword);
       (repository.createUser as sinon.SinonStub).resolves(expectedUser);
 
       const result = await service.createUser(email, password);
@@ -62,7 +63,7 @@ describe('UsersService', () => {
         id: '123',
         email,
         password: 'hashedPassword',
-        role: 'user',
+        role: UserRole.USER,
         createdAt: new Date(),
       };
 
@@ -75,7 +76,7 @@ describe('UsersService', () => {
 
     it('should return null when user not found', async () => {
       const email = 'nonexistent@example.com';
-      
+
       (repository.findByEmail as sinon.SinonStub).resolves(null);
 
       const result = await service.findByEmail(email);
@@ -83,4 +84,4 @@ describe('UsersService', () => {
       expect(result).to.be.null;
     });
   });
-}); 
+});

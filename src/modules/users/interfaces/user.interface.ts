@@ -1,7 +1,9 @@
+import { UserRole } from '@/modules/auth/dto/auth.dto';
+
 export interface User {
   id: string;
   email: string;
   password: string;
-  role: 'user' | 'admin';
-  createdAt: Date;
+  role: UserRole;
+  createdAt?: Date;
 }

@@ -1,23 +1,25 @@
-import { PaymentRepository } from '../../src/modules/subscriptions/payment.repository';
 import { expect } from 'chai';
+import { PaymentRepository } from '@/modules/subscriptions/repositories/payment.repository';
 import sinon from 'sinon';
 import * as admin from 'firebase-admin';
 
+const PAYMENT_TEST_NAME = 'payments';
+const mockPaymentData = {
+  id: 'payment123',
+  userId: 'mock-test-user',
+  planId: 'mock-price-id',
+  status: 'successful',
+  stripeSubscriptionId: 'mock-subscription-id',
+  createdAt: new Date(),
+};
+
 describe('PaymentRepository', () => {
   let repository: PaymentRepository;
-  let firestoreStub: any;
+  let firestoreStub: sinon.SinonStubbedInstance<admin.firestore.Firestore>;
 
   beforeEach(() => {
-    firestoreStub = {
-      collection: sinon.stub().returnsThis(),
-      add: sinon.stub(),
-      doc: sinon.stub().returnsThis(),
-      get: sinon.stub(),
-      update: sinon.stub(),
-    };
-
-    sinon.stub(admin, 'firestore').returns(firestoreStub);
-    repository = new PaymentRepository();
+    firestoreStub = sinon.createStubInstance(admin.firestore.Firestore);
+    repository = new PaymentRepository(firestoreStub);
   });
 
   afterEach(() => {
@@ -26,27 +28,21 @@ describe('PaymentRepository', () => {
 
   describe('createPayment', () => {
     it('should create payment successfully', async () => {
-      const paymentData = {
-        userId: 'user123',
-        amount: 9.99,
-        status: 'successful',
-      };
+      firestoreStub.collection.withArgs(PAYMENT_TEST_NAME).returns({
+        add: sinon.stub().resolves(mockPaymentData),
+      } as any);
 
-      firestoreStub.add.resolves({ id: 'payment123' });
-
-      await repository.createPayment(paymentData);
+      await repository.createPayment(mockPaymentData);
+      expect(firestoreStub.collection.calledWith(PAYMENT_TEST_NAME)).to.be.true;
     });
 
     it('should handle errors when creating payment', async () => {
-      const paymentData = {
-        userId: 'user123',
-        amount: 9.99,
-      };
-
-      firestoreStub.add.rejects(new Error('Firestore error'));
+      firestoreStub.collection.withArgs(PAYMENT_TEST_NAME).returns({
+        add: sinon.stub().rejects(new Error('Firestore error')),
+      } as any);
 
       try {
-        await repository.createPayment(paymentData);
+        await repository.createPayment(mockPaymentData);
         expect.fail('Should have thrown an error');
       } catch (error) {
         expect(error.message).to.equal('Failed to create payment');

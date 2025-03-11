@@ -1,7 +1,7 @@
 import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
-import { AuthCredentialsDto, LoginResponseDto } from './dto/auth.dto';
+import { AuthCredentialsDTO, LoginResponseDTO } from './dto/auth.dto';
 import {
   ApiTags,
   ApiOperation,
@@ -9,21 +9,9 @@ import {
   ApiBody,
   ApiBadRequestResponse,
   ApiUnauthorizedResponse,
-  ApiProperty,
 } from '@nestjs/swagger';
 
-import { IsNotEmpty, IsString } from 'class-validator';
 import { Public } from '@/shared/decorators/public.decorator';
-
-/**
- * Data Transfer Object for creating a checkout session.
- */
-export class CreateCheckoutSessionDto {
-  @ApiProperty()
-  @IsString()
-  @IsNotEmpty()
-  planId: string;
-}
 
 @ApiTags('auth')
 @Controller('auth')
@@ -36,16 +24,16 @@ export class AuthController {
   @Post('signup')
   @Public()
   @ApiOperation({ summary: 'Register a new user' })
-  @ApiBody({ type: AuthCredentialsDto })
+  @ApiBody({ type: AuthCredentialsDTO })
   @ApiResponse({
     status: 201,
     description: 'User successfully registered',
-    type: LoginResponseDto,
+    type: LoginResponseDTO,
   })
   @ApiBadRequestResponse({ description: 'Invalid input data' })
   async signup(
-    @Body() credentials: AuthCredentialsDto,
-  ): Promise<LoginResponseDto> {
+    @Body() credentials: AuthCredentialsDTO,
+  ): Promise<LoginResponseDTO> {
     await this.usersService.createUser(credentials.email, credentials.password);
     return this.authService.login(credentials.email, credentials.password);
   }
@@ -54,16 +42,16 @@ export class AuthController {
   @Public()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login with credentials' })
-  @ApiBody({ type: AuthCredentialsDto })
+  @ApiBody({ type: AuthCredentialsDTO })
   @ApiResponse({
     status: 200,
     description: 'User successfully logged in',
-    type: LoginResponseDto,
+    type: LoginResponseDTO,
   })
   @ApiUnauthorizedResponse({ description: 'Invalid credentials' })
   async login(
-    @Body() credentials: AuthCredentialsDto,
-  ): Promise<LoginResponseDto> {
+    @Body() credentials: AuthCredentialsDTO,
+  ): Promise<LoginResponseDTO> {
     return this.authService.login(credentials.email, credentials.password);
   }
 }

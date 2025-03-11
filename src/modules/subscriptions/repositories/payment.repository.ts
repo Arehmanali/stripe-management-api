@@ -1,5 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { createLogger } from '@/shared/logger/logger';
+import { Injectable } from '@nestjs/common';
 import * as admin from 'firebase-admin';
+import { Firestore } from 'firebase-admin/firestore';
 
 export interface Payment {
   id: string;
@@ -10,14 +12,13 @@ export interface Payment {
   createdAt: Date;
 }
 
+const PAYMENT_COLLECTION_NAME = 'payments';
+
 @Injectable()
 export class PaymentRepository {
-  private db: FirebaseFirestore.Firestore;
-  private readonly logger = new Logger(PaymentRepository.name);
+  private readonly logger = createLogger(PaymentRepository.name);
 
-  constructor() {
-    this.db = admin.firestore();
-  }
+  constructor(private readonly db: Firestore) {}
 
   /**
    * Creates a new payment record in Firestore.
@@ -25,7 +26,7 @@ export class PaymentRepository {
    */
   async createPayment(paymentData: Payment): Promise<void> {
     try {
-      await this.db.collection('payments').add({
+      await this.db.collection(PAYMENT_COLLECTION_NAME).add({
         ...paymentData,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
@@ -40,12 +41,15 @@ export class PaymentRepository {
 
   /**
    * Retrieves a payment by its ID.
-   * @param paymentId - The ID of the payment to retrieve.
+   * @param {string} paymentId - The ID of the payment to retrieve.
    * @returns The payment data or null if not found.
    */
   async getPaymentById(paymentId: string): Promise<Payment | null> {
     try {
-      const doc = await this.db.collection('payments').doc(paymentId).get();
+      const doc = await this.db
+        .collection(PAYMENT_COLLECTION_NAME)
+        .doc(paymentId)
+        .get();
       if (!doc.exists) {
         this.logger.warn(`Payment with ID ${paymentId} not found`);
         return null;
@@ -60,12 +64,12 @@ export class PaymentRepository {
 
   /**
    * Updates a payment's status.
-   * @param paymentId - The ID of the payment to update.
-   * @param status - The new status of the payment.
+   * @param {string} paymentId - The ID of the payment to update.
+   * @param {string} status - The new status of the payment.
    */
   async updatePaymentStatus(paymentId: string, status: string): Promise<void> {
     try {
-      await this.db.collection('payments').doc(paymentId).update({
+      await this.db.collection(PAYMENT_COLLECTION_NAME).doc(paymentId).update({
         status,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });

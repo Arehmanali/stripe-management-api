@@ -1,7 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SubscriptionsService } from '../../src/modules/subscriptions/subscriptions.service';
 import { PlansService } from '../../src/modules/plans/plans.service';
-import { PaymentRepository } from '../../src/modules/subscriptions/payment.repository';
+import { PaymentRepository } from '../../src/modules/subscriptions/repositories/payment.repository';
+import { SubscriptionRepository } from '@/modules/subscriptions/repositories/subscriptions.respository';
 import { expect } from 'chai';
 import sinon from 'sinon';
 import Stripe from 'stripe';
@@ -10,13 +11,14 @@ describe('SubscriptionsService', () => {
   let service: SubscriptionsService;
   let plansService: PlansService;
   let paymentRepository: PaymentRepository;
+  let subscriptionRepository: SubscriptionRepository;
   let stripeStub: sinon.SinonStubbedInstance<Stripe>;
 
   beforeEach(async () => {
     stripeStub = {
       checkout: {
         sessions: {
-          create: sinon.stub(),
+          create: sinon.stub().resolves({ id: 'sess_123' }),
         },
       },
       webhooks: {
@@ -43,12 +45,26 @@ describe('SubscriptionsService', () => {
             updatePaymentStatus: sinon.stub(),
           },
         },
+        {
+          provide: SubscriptionRepository,
+          useValue: {
+            createPayment: sinon.stub(),
+            updatePaymentStatus: sinon.stub(),
+          },
+        },
+        {
+          provide: Stripe,
+          useValue: stripeStub,
+        },
       ],
     }).compile();
 
     service = module.get<SubscriptionsService>(SubscriptionsService);
     plansService = module.get<PlansService>(PlansService);
     paymentRepository = module.get<PaymentRepository>(PaymentRepository);
+    subscriptionRepository = module.get<SubscriptionRepository>(
+      SubscriptionRepository,
+    );
   });
 
   afterEach(() => {
@@ -66,23 +82,19 @@ describe('SubscriptionsService', () => {
         stripePriceId: 'price_basic',
         features: ['Feature 1'],
       };
-      const sessionId = 'sess_123';
 
-      (plansService.getPlanById as sinon.SinonStub).returns(plan);
-      (stripeStub.checkout.sessions.create as sinon.SinonStub).resolves({
-        id: sessionId,
-      });
+      (plansService.getPlanById as sinon.SinonStub).resolves(plan);
 
       const result = await service.createCheckoutSession(userId, planId);
 
-      expect(result).to.deep.equal({ sessionId });
+      expect(result).to.deep.equal({ sessionId: 'sess_123' });
     });
 
     it('should throw NotFoundException for invalid plan', async () => {
       const userId = 'user123';
       const planId = 'invalid';
 
-      (plansService.getPlanById as sinon.SinonStub).returns(undefined);
+      (plansService.getPlanById as sinon.SinonStub).resolves(undefined);
 
       try {
         await service.createCheckoutSession(userId, planId);
