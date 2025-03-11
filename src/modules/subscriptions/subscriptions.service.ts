@@ -29,6 +29,7 @@ export class SubscriptionsService {
    * @returns {Promise<{ sessionId: string }>} The session ID for the checkout.
    */
   async createCheckoutSession(userId: string, planId: string) {
+    // eslint-disable-next-line @typescript-eslint/await-thenable
     const plan = await this.plansService.getPlanById(planId);
     if (!plan) {
       throw new NotFoundException('Plan not found');

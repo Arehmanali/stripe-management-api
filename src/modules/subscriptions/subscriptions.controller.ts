@@ -28,6 +28,7 @@ import { Request } from 'express';
 import { Subscription } from '../../shared/interfaces/subscription.interface';
 import { JWT_AUTH } from '@/shared/strategies/jwt.strategy';
 import { createLogger } from '@/shared/logger/logger';
+import { UserRole } from '../auth/dto/auth.dto';
 
 /**
  * Controller responsible for handling subscription-related operations.
@@ -92,7 +93,7 @@ export class SubscriptionsController {
    * @returns {Promise<Subscription[]>} - Returns a list of all subscriptions.
    */
   @Get('all')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get all subscriptions (Admin only)' })
   @ApiResponse({
     status: 200,

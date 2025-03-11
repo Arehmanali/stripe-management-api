@@ -36,8 +36,12 @@ export class UsersService {
       const createdUser = await this.userRepository.createUser(user);
       this.logger.log(`User created successfully: ${createdUser.id}`);
       return createdUser;
-    } catch (error) {
-      this.logger.error(`Error creating user: ${error.message}`, error.stack);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        this.logger.error(`Error creating user: ${error.message}`, error.stack);
+      } else {
+        this.logger.error('Unknown error occurred while creating user');
+      }
       throw error;
     }
   }
@@ -59,8 +63,11 @@ export class UsersService {
         this.logger.log(`User found: ${user.id}`);
       }
       return user;
-    } catch (error) {
-      this.logger.error(`Error finding user: ${error.message}`, error.stack);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        this.logger.error(`Error finding user: ${error.message}`, error.stack);
+      }
+      this.logger.error('Unknown error while finding the user');
       throw error;
     }
   }
